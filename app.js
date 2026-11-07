@@ -55,6 +55,7 @@ let examConfig = {
 // 檢查是否為學生模式 (URL 帶 ?mode=student 或純平板掃描)
 const urlParams = new URLSearchParams(window.location.search);
 const isStudentOnlyMode = urlParams.get('mode') === 'student';
+const isDashboardOnlyMode = urlParams.get('mode') === 'dashboard';
 
 // 初始化
 window.addEventListener('DOMContentLoaded', () => {
@@ -65,6 +66,9 @@ window.addEventListener('DOMContentLoaded', () => {
     loadInspectedConfig();
     loadTeacherSettingsUI();
     initDashboardMatrix();
+    if (isDashboardOnlyMode) {
+        switchMainView('dashboard');
+    }
 });
 
 // 0. 學生模式權限隔離：隱藏教師設定、全班儀表板、投影按鈕
