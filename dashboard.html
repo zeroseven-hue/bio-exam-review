@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>七年級生物段考錯題診斷與訂正系統</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 頂部導覽列 -->
+    <header class="navbar">
+        <div class="logo">🧬 生物段考錯題診斷與自主訂正系統</div>
+        <div class="nav-controls">
+            <button id="btn-student-view" class="nav-btn" onclick="switchMainView('student')">學生訂正模式</button>
+            <button id="btn-dashboard-view" class="nav-btn active" onclick="switchMainView('dashboard')">全班即時儀表板</button>
+            <button id="btn-settings-view" class="nav-btn" onclick="switchMainView('settings')">教師設定</button>
+            <button id="btn-qr-modal" class="nav-btn nav-btn-qr" onclick="openQrModal()">📱 投影 QR Code</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- ==========================================
+             1. 學生模式：登入與成績錯題標記
+             ========================================== -->
+        <section id="view-student" class="view-section">
+            <!-- 登入與登記卡片 -->
+            <div id="card-login" class="card login-card">
+                <div class="card-header">
+                    <h2>📋 請輸入登入資訊與段考成績</h2>
+                    <p class="subtitle">依據紙本考卷填寫，系統將自動比對錯題數並產生專屬訂正清單</p>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="select-exam">學年與考次：</label>
+                        <select id="select-exam" onchange="onExamChange()">
+                            <option value="11501_2">11501_七上第二次定期評量 (40題/2.5分)</option>
+                            <option value="11501_1">11501_七上第一次定期評量 (45題/100分)</option>
+                            <option value="11501_3">11501_七上第三次定期評量 (預設40題)</option>
+                            <option value="custom">自訂外部題庫 JSON...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="select-class">班級：</label>
+                        <select id="select-class">
+                            <option value="701">701 班</option>
+                            <option value="702">702 班</option>
+                            <option value="703">703 班</option>
+                            <option value="704">704 班</option>
+                            <option value="705">705 班</option>
+                            <option value="706">706 班</option>
+                            <option value="707">707 班</option>
+                            <option value="708">708 班</option>
+                            <option value="709">709 班</option>
+                            <option value="710">710 班</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="select-seat">座號：</label>
+                        <select id="select-seat">
+                            <!-- 01 ~ 35 動態生成 -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="input-name">姓名：</label>
+                        <input type="text" id="input-name" placeholder="請輸入姓名" maxlength="10">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="input-score">紙本考卷原始成績（0 ~ 100 分）：</label>
+                        <div class="score-input-wrap">
+                            <input type="number" id="input-score" placeholder="例如：85" min="0" max="100" step="0.5" oninput="onScoreInput()">
+                            <span class="unit">分</span>
+                        </div>
+                        <p id="score-calc-hint" class="hint-text">請輸入成績以計算應錯題數</p>
+                    </div>
+                </div>
+
+                <!-- 題號標記圓圈區 -->
+                <div id="bubble-section" class="bubble-section hidden">
+                    <div class="bubble-title-bar">
+                        <h3>🔴 請依紙本考卷點選您的【錯題】（點選後變紅色）：</h3>
+                        <div class="bubble-stats">
+                            應選錯題：<span id="target-wrong-count" class="badge badge-warn">0</span> 題 ｜ 
+                            目前已圈選：<span id="current-wrong-count" class="badge badge-info">0</span> 題
+                        </div>
+                    </div>
+                    <div id="palette-grid" class="palette-grid">
+                        <!-- 動態生成 1~N 題號小圓圈 -->
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <button id="btn-start-correct" class="btn-primary" onclick="startCorrectionMode()" disabled>
+                        開始進行錯題訂正 🚀
+                    </button>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 錯題逐題訂正工作卡片
+                 ========================================== -->
+            <div id="card-correct" class="card correct-card hidden">
+                <!-- 頂部資訊與題號導航盤 -->
+                <div class="correct-header">
+                    <div class="student-info-tag">
+                        <span id="tag-student">701班 05號 王小明</span>
+                        <span class="divider">|</span>
+                        <span>成績：<strong id="tag-score">85</strong> 分</span>
+                    </div>
+                    <div class="correct-progress">
+                        錯題進度：<span id="correct-progress-text">1 / 6</span>
+                    </div>
+                </div>
+
+                <!-- 題號小圓圈導航列 -->
+                <div class="circle-nav-wrapper">
+                    <div class="circle-nav-title">題號導航盤（點選快速切換）：</div>
+                    <div id="correct-circle-nav" class="circle-nav-grid">
+                        <!-- 只有錯題才會呈現紅/綠狀態 -->
+                    </div>
+                </div>
+
+                <!-- 閱讀防秒退計時器提示 -->
+                <div id="cooldown-banner" class="cooldown-banner hidden">
+                    ⏱️ 觀念研讀中：請先認真閱讀選項解析與觀念 <strong id="cooldown-sec">10</strong> 秒，理解後再進行訂正作答喔！
+                </div>
+
+                <!-- 閱讀題組文章引文區 (若有才顯示) -->
+                <div id="passage-box" class="passage-box hidden">
+                    <div class="passage-tag">📖 閱讀測驗篇章</div>
+                    <div id="passage-content" class="passage-content"></div>
+                </div>
+
+                <!-- 題目內容 -->
+                <div class="question-main">
+                    <div class="q-title-row">
+                        <span id="q-number-badge" class="badge badge-danger">第 3 題</span>
+                        <h3 id="q-text" class="q-text">題目文字載入中...</h3>
+                    </div>
+
+                    <!-- 選項按鈕清單 -->
+                    <div id="options-list" class="options-list">
+                        <!-- A, B, C, D 選項 -->
+                    </div>
+                </div>
+
+                <!-- 核心解析區塊（預設常駐展開） -->
+                <div class="analysis-box">
+                    <div class="analysis-header">
+                        <h4>🔍 本題選項除錯與觀念解析</h4>
+                    </div>
+                    <div id="analysis-list" class="analysis-list">
+                        <!-- 逐選項解析 -->
+                    </div>
+                    <!-- 核心主句高亮卡片 -->
+                    <div class="core-sentence-box">
+                        <div class="core-title">📌 紙本考卷訂正筆記（核心主句）：</div>
+                        <div id="core-sentence-text" class="core-text"></div>
+                    </div>
+                </div>
+
+                <!-- 訂正輸入與確認按鈕區 -->
+                <div class="correct-action-footer">
+                    <div class="input-core-wrap">
+                        <label for="input-user-core">✏️ 請將上方核心主句寫入紙本考卷，並在下方鍵入重點（至少 4 個字）：</label>
+                        <input type="text" id="input-user-core" placeholder="請將上方筆記精華的主句重點鍵入此處...">
+                    </div>
+                    <div class="btn-row">
+                        <button id="btn-confirm-single-correct" class="btn-success" onclick="confirmCurrentQuestion()">
+                            確認並完成此題訂正 ➔
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             2. 全班即時儀表板模式（投影用）
+             ========================================== -->
+        <section id="view-dashboard" class="view-section active">
+            <div class="card dashboard-card">
+                <div class="dashboard-header">
+                    <h2>📊 全班段考檢討與訂正即時戰情儀表板</h2>
+                    <div class="dash-summary-row">
+                        <div class="summary-pill">
+                            <span class="label">班級：</span>
+                            <span id="dash-class-name" class="val">701 班</span>
+                        </div>
+                        <div class="summary-pill">
+                            <span class="label">繳交進度：</span>
+                            <span id="dash-completed-count" class="val highlight">0 / 35 人</span>
+                        </div>
+                        <div class="summary-pill">
+                            <span class="label">全班繳交率：</span>
+                            <span id="dash-submission-rate" class="val highlight text-success">0%</span>
+                        </div>
+                        <div class="summary-pill">
+                            <span class="label">教師查核進度：</span>
+                            <span id="dash-inspected-count" class="val highlight text-indigo">0 / 35 人</span>
+                        </div>
+                        <div class="summary-pill">
+                            <span class="label">全班目前平均：</span>
+                            <span id="dash-avg-score" class="val highlight">0 分</span>
+                        </div>
+                    </div>
+
+                    <!-- 進度條 -->
+                    <div class="progress-bar-container">
+                        <div id="dash-progress-fill" class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- 請假座號管理列 -->
+                    <div class="leave-admin-bar">
+                        <div class="leave-input-wrap">
+                            <label for="dash-absent-input">🏖️ 本班今日請假座號：</label>
+                            <input type="text" id="dash-absent-input" placeholder="例如：05, 12" onchange="onAbsentInputChange()">
+                            <span class="hint">（自動扣除應到人數，精準計算實到繳交率）</span>
+                        </div>
+                        <div class="leave-stats-wrap">
+                            應到：<span id="stat-total-students">35</span> 人 ｜ 
+                            請假：<span id="stat-absent-count" class="text-warning">0</span> 人 ｜ 
+                            實到應交：<strong id="stat-actual-required" class="text-primary">35</strong> 人
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- 左：座號矩陣 -->
+                    <div class="dash-left">
+                        <div class="dash-section-title">
+                            <h3>🏫 全班座號狀態矩陣（學生作答亮燈 ＋ 老師右上角查核小徽章）</h3>
+                        </div>
+                        <div class="matrix-legend">
+                            <span class="legend-item"><span class="dot dot-gray"></span>未登錄</span>
+                            <span class="legend-item"><span class="dot dot-red"></span>訂正中</span>
+                            <span class="legend-item"><span class="dot dot-green"></span>學生完成</span>
+                            <span class="legend-item"><span class="inspect-mini-badge done">👁️</span>老師已查核</span>
+                            <span class="legend-item"><span class="dot dot-amber"></span>請假 🏖️</span>
+                        </div>
+                        <div id="dash-seats-matrix" class="dash-seats-matrix">
+                            <!-- 01~35 方格動態生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 右：Top 5 易錯題標靶 -->
+                    <div class="dash-right">
+                        <div class="dash-section-title">
+                            <h3>🔥 全班 Top 5 易錯題標靶（優先全班精準講解）</h3>
+                        </div>
+                        <ul id="dash-top-errors" class="top-error-list">
+                            <li class="empty-msg">尚無學生送出錯題資料...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==========================================
+             3. 教師參數設定模式（總題數與配分後台自訂）
+             ========================================== -->
+        <section id="view-settings" class="view-section hidden">
+            <div class="card settings-card">
+                <h2>⚙️ 教師系統參數與考卷配分設定</h2>
+                <p class="subtitle">可自由定義總題數（例如：40、42、44、45 題）與配分模式，系統將自動比對錯題防呆</p>
+
+                <!-- 配分與題數設定專區 -->
+                <div class="settings-box">
+                    <h3 class="box-sub-title">📝 考卷題數與配分模式設定</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="cfg-total-questions">考卷總題數：</label>
+                            <input type="number" id="cfg-total-questions" value="40" min="10" max="60" oninput="onCustomConfigChange()">
+                            <span class="hint-text">例如：40題、42題、44題、45題</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cfg-score-mode">配分計算模式：</label>
+                            <select id="cfg-score-mode" onchange="onScoreModeChange()">
+                                <option value="equal">全卷均分制（每題相同分數）</option>
+                                <option value="split">分段配分制（前 N 題 X 分，其餘 Y 分）</option>
+                            </select>
+                        </div>
+
+                        <!-- 均分模式選項 -->
+                        <div id="mode-equal-wrap" class="form-group full-width">
+                            <label for="cfg-score-per-q">每題分數：</label>
+                            <div class="score-input-wrap">
+                                <input type="number" id="cfg-score-per-q" value="2.5" step="0.1" min="0.5" max="10" oninput="onCustomConfigChange()">
+                                <span class="unit">分 / 題</span>
+                                <span id="cfg-equal-total-calc" class="hint-pill">40 題 × 2.5 分 = 100 分</span>
+                            </div>
+                        </div>
+
+                        <!-- 分段模式選項 -->
+                        <div id="mode-split-wrap" class="form-group full-width hidden">
+                            <div class="split-inputs-row">
+                                <div class="split-item">
+                                    <label>第 1 ～ <input type="number" id="cfg-split-cut" value="10" style="width:60px;" oninput="onCustomConfigChange()"> 題：</label>
+                                    每題 <input type="number" id="cfg-split-p1" value="3" step="0.5" style="width:70px;" oninput="onCustomConfigChange()"> 分
+                                </div>
+                                <div class="split-item">
+                                    <label>其餘題目：</label>
+                                    每題 <input type="number" id="cfg-split-p2" value="2" step="0.5" style="width:70px;" oninput="onCustomConfigChange()"> 分
+                                </div>
+                            </div>
+                            <span id="cfg-split-total-calc" class="hint-pill">10題×3分 + 35題×2分 = 100 分</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系統與環境設定 -->
+                <div class="settings-box">
+                    <h3 class="box-sub-title">🌐 雲端同步與課堂常規設定</h3>
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="setting-gas-url">Google Apps Script Web App 部署網址：</label>
+                            <input type="text" id="setting-gas-url" value="https://script.google.com/macros/s/AKfycby-8JV1agwhlbLTrQsMS0afAz2rnBAncu1tL4A0JZhz7rm7jqLTlUA_kfhCl8gXbgSL5w/exec">
+                            <p class="hint-text">後端 Code.gs 發布為 Web 應用程式後的網址。未填寫時系統以本地展示模式運作。</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-cooldown">錯題閱讀防秒退秒數：</label>
+                            <input type="number" id="setting-cooldown" value="10" min="0" max="30">
+                            <span class="unit">秒</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="setting-class-size">班級預設人數：</label>
+                            <input type="number" id="setting-class-size" value="35" min="20" max="50">
+                            <span class="unit">人</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="saveSettings()">儲存所有設定並套用 💾</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==========================================
+         彈窗 1：排隊交卷提示（避免同時繳交網路衝突）
+         ========================================== -->
+    <div id="modal-queue" class="modal-overlay hidden">
+        <div class="modal-card mini-card">
+            <div class="spinner"></div>
+            <h3 id="queue-status-title">⏳ 正在同步雲端紀錄...</h3>
+            <p id="queue-status-desc">目前全班正在同步資料，系統正在排隊為您安全登記，請勿關閉網頁...</p>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         彈窗 2：最後確認與結算單（主句抄寫 + 家長簽名 + 平板歸位）
+         ========================================== -->
+    <div id="modal-summary" class="modal-overlay hidden">
+        <div class="modal-card summary-card">
+            <div class="summary-top">
+                <span class="success-icon">🎉</span>
+                <h2>段考錯題訂正完成！</h2>
+                <p class="summary-sub">已完成線上訂正診斷，請務必完成以下紙本手續</p>
+            </div>
+
+            <!-- 分數與班級平均對照 -->
+            <div class="score-compare-card">
+                <div class="compare-col">
+                    <div class="c-label">您的段考分數</div>
+                    <div id="modal-my-score" class="c-val text-primary">85 分</div>
+                </div>
+                <div class="compare-divider"></div>
+                <div class="compare-col">
+                    <div class="c-label">目前全班平均</div>
+                    <div id="modal-class-avg" class="c-val text-info">78.5 分</div>
+                </div>
+                <div class="compare-divider"></div>
+                <div class="compare-col">
+                    <div class="c-label">訂正題數</div>
+                    <div id="modal-corrected-count" class="c-val text-success">6 題</div>
+                </div>
+            </div>
+
+            <!-- 錯題核心主句彙整區（抄寫回紙本考卷用） -->
+            <div class="sentences-review-box">
+                <div class="box-title">
+                    ✍️【紙本考卷訂正核對】請確認您已將以下錯題筆記精華，確實抄寫至您的紙本考卷上：
+                </div>
+                <div id="modal-sentences-list" class="sentences-list">
+                    <!-- 動態列出所有錯題之核心主句 -->
+                </div>
+            </div>
+
+            <!-- 家長簽名提醒特別警告框 -->
+            <div class="parent-sign-alert">
+                <div class="alert-icon">👨‍👩‍👦</div>
+                <div class="alert-content">
+                    <h4>重要！紙本考卷家長簽名提醒：</h4>
+                    <p>請將紙本考卷帶回家，交由家長查閱您今日的訂正成果，並請家長在<strong>【試卷抬頭分數欄下方】</strong>親自簽名，於下次上課交回給老師抽查！</p>
+                </div>
+            </div>
+
+            <!-- 學生雙重確認勾選框 (必須勾選才能退出) -->
+            <div class="verification-check-wrap">
+                <label class="check-container">
+                    <input type="checkbox" id="check-confirm-paper" onchange="onPaperCheckChange()">
+                    <span class="checkmark"></span>
+                    <span class="check-label">
+                        <strong>我保證：</strong>我已經認真看完上述每題解析，並已將<strong>核心主句確實訂正在紙本考卷上</strong>，且知道回家後要給家長在分數下方簽名。
+                    </span>
+                </label>
+            </div>
+
+            <!-- 平板歸位常規引導 -->
+            <div class="tablet-return-box">
+                <div class="box-title">📱【平板使用常規與歸位提醒】</div>
+                <ol class="return-steps">
+                    <li><strong>擦拭關機</strong>：點選下方按鈕退出後，按平板電源鍵關閉螢幕，並用擦拭布輕擦螢幕。</li>
+                    <li><strong>座號插槽歸位</strong>：請依座號 <strong id="modal-return-seat" class="text-primary">05 號</strong>，放回對應充電車插槽。</li>
+                    <li><strong>插妥充電線</strong>：確認充電呼吸燈亮起，整齊排好後回座。</li>
+                </ol>
+            </div>
+
+            <div class="modal-action-bar">
+                <button id="btn-final-finish" class="btn-primary full-width" onclick="finishAndReset()" disabled>
+                    請先勾選上方「我保證已訂正考卷」方可退出
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         彈窗 3：大螢幕 QR Code 投影彈窗
+         ========================================== -->
+    <div id="modal-qr" class="modal-overlay hidden">
+        <div class="modal-card mini-card qr-card">
+            <h2>📱 學生掃描 QR Code 進入訂正</h2>
+            <p class="subtitle">請同學使用平板相機掃描下方條碼立即開跑</p>
+            <div class="qr-image-wrap">
+                <img id="qr-code-img" src="" alt="訂正系統 QR Code" class="qr-img">
+            </div>
+            <div class="qr-url-box">
+                <input type="text" id="qr-url-text" readonly>
+                <button type="button" class="btn-copy" onclick="copySystemUrl()">複製網址</button>
+            </div>
+            <button class="btn-primary" style="margin-top:16px;" onclick="closeQrModal()">關閉投影</button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         彈窗 4：老師查核學生紙本訂正與主句明細彈窗
+         ========================================== -->
+    <div id="modal-inspect" class="modal-overlay hidden">
+        <div class="modal-card inspect-card">
+            <div class="summary-top">
+                <span class="success-icon">🔍</span>
+                <h2 id="inspect-title">701 班 05 號 學生訂正查核</h2>
+                <p id="inspect-subtitle" class="summary-sub">段考成績：85 分 ｜ 錯題數：6 題 ｜ 狀態：已完成訂正</p>
+            </div>
+
+            <div class="inspect-content-box">
+                <div class="box-title">📝 該生錯題與核心主句清單（請核對紙本考卷）：</div>
+                <div id="inspect-cores-list" class="sentences-list" style="max-height:260px;">
+                    <!-- 動態載入該生錯題主句 -->
+                </div>
+            </div>
+
+            <div class="inspect-action-bar" style="margin-top:20px; display:flex; gap:12px;">
+                <button id="btn-toggle-inspect" class="btn-primary" onclick="toggleCurrentSeatInspection()">
+                    👁️ 標記為：老師已查核紙本考卷
+                </button>
+                <button class="btn-secondary" onclick="closeInspectModal()">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入題庫與邏輯程式 -->
+    <script src="exam_data/presets.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
