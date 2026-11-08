@@ -562,17 +562,8 @@ function switchMainView(viewName) {
 
     // 教師設定防呆密碼（若尚未解鎖）
     if (viewName === 'settings' && !isTeacherUnlocked) {
-        const pwd = prompt('🔒 請輸入教師管理解鎖密碼：');
-        const correctPin = localStorage.getItem('teacher_security_pin') || '8088';
-        if (pwd === correctPin) {
-            isTeacherUnlocked = true;
-            alert('✅ 密碼正確，已解鎖教師設定！');
-        } else if (pwd !== null) {
-            alert('❌ 密碼錯誤，無法進入教師設定！');
-            return;
-        } else {
-            return;
-        }
+        openTeacherSettingsPinModal();
+        return;
     }
 
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -680,6 +671,7 @@ function toggleSeatInspectionBadge(seatVal) {
     }
     saveInspectedConfig();
     updateInspectionUI(seatVal);
+    markInspectionChanged();
 }
 
 function updateInspectionUI(seatVal) {

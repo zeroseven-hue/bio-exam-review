@@ -292,9 +292,14 @@
                             <span class="label">全班繳交率：</span>
                             <span id="dash-submission-rate" class="val highlight text-success">0%</span>
                         </div>
-                        <div class="summary-pill">
-                            <span class="label">教師查核進度：</span>
-                            <span id="dash-inspected-count" class="val highlight text-indigo">0 / 35 人</span>
+                        <div class="summary-pill" style="display:flex; align-items:center; gap:8px;">
+                            <div>
+                                <span class="label">教師查核進度：</span>
+                                <span id="dash-inspected-count" class="val highlight text-indigo">0 / 35 人</span>
+                            </div>
+                            <button id="btn-sync-inspected" type="button" onclick="syncInspectedToGAS(false)" style="background:#2563eb; color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:0.78rem; font-weight:800; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:all 0.2s;">
+                                💾 同步至試算表
+                            </button>
                         </div>
                         <div class="summary-pill">
                             <span class="label">全班目前平均：</span>
@@ -660,6 +665,22 @@
     Copyright © 2026 Selin (零柒). All Rights Reserved. 專為國民中學生物課堂打造 ‧ 保留教學著作權利
   </div>
 </footer>
+
+
+  <!-- 🔒 教師設定密碼彈窗 (遮蔽密碼輸入) -->
+  <div id="modal-settings-pin" class="modal-overlay hidden" style="z-index:999999;">
+    <div class="modal-card" style="max-width:380px; text-align:center; padding:28px 24px;">
+      <div style="font-size:2.8rem; margin-bottom:10px;">🔒</div>
+      <h3 style="margin:0 0 8px 0; font-size:1.3rem; color:var(--text-dark);">進入教師設定</h3>
+      <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:18px;">請輸入教師管理解鎖密碼（密碼已遮蔽）：</p>
+      <input type="password" id="input-settings-pin" placeholder="請輸入密碼" maxlength="10" autocomplete="off" style="width:85%; padding:10px; font-size:1.5rem; text-align:center; letter-spacing:5px; border:2px solid #cbd5e1; border-radius:12px; outline:none; margin-bottom:10px;" onkeydown="if(event.key==='Enter') verifyTeacherSettingsPin()">
+      <div id="settings-pin-err" style="color:#ef4444; font-size:0.85rem; font-weight:700; min-height:20px; margin-bottom:12px;"></div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeTeacherSettingsPinModal()">取消</button>
+        <button type="button" class="btn-primary" style="flex:1;" onclick="verifyTeacherSettingsPin()">確認解鎖</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
