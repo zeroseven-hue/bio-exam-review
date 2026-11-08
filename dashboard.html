@@ -6,6 +6,99 @@
     <title>七年級生物段考錯題診斷與訂正系統</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style id="pinGatekeeperStyle">
+/* 🔒 教師安全防護 PIN 密碼鎖樣式 */
+.pin-modal-overlay {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  z-index: 9999999 !important;
+}
+.pin-modal-overlay.hidden {
+  display: none !important;
+}
+.pin-modal-card {
+  background: #1e293b !important;
+  border: 2px solid #38bdf8 !important;
+  border-radius: 24px !important;
+  padding: 36px 28px !important;
+  text-align: center !important;
+  max-width: 420px !important;
+  width: 90% !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7) !important;
+  animation: pinPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif !important;
+}
+@keyframes pinPopIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.pin-icon {
+  font-size: 3.2rem !important;
+  margin-bottom: 12px !important;
+  line-height: 1 !important;
+}
+.pin-modal-card h2 {
+  font-size: 1.45rem !important;
+  color: #f8fafc !important;
+  margin: 0 0 10px 0 !important;
+  font-weight: 800 !important;
+}
+.pin-modal-card p {
+  color: #94a3b8 !important;
+  font-size: 0.92rem !important;
+  margin-bottom: 20px !important;
+  line-height: 1.5 !important;
+}
+.pin-modal-card input {
+  width: 82% !important;
+  padding: 12px !important;
+  font-size: 1.6rem !important;
+  text-align: center !important;
+  letter-spacing: 6px !important;
+  background: #0f172a !important;
+  border: 2px solid #334155 !important;
+  border-radius: 12px !important;
+  color: #38bdf8 !important;
+  margin-bottom: 12px !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+.pin-modal-card input:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4) !important;
+}
+.pin-error-text {
+  color: #f87171 !important;
+  font-size: 0.88rem !important;
+  font-weight: 700 !important;
+  min-height: 22px !important;
+  margin-bottom: 14px !important;
+}
+.btn-pin-submit {
+  width: 100% !important;
+  padding: 13px !important;
+  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s, transform 0.1s !important;
+  box-sizing: border-box !important;
+}
+.btn-pin-submit:hover {
+  opacity: 0.95 !important;
+  transform: translateY(-1px) !important;
+}
+</style>
+
 </head>
 <body>
     <!-- 頂部導覽列 -->
@@ -476,5 +569,87 @@
     <!-- 載入題庫與邏輯程式 -->
     <script src="exam_data/presets.js"></script>
     <script src="app.js"></script>
+
+<!-- 🔒 教師安全防護 PIN 密碼解鎖 Modal -->
+<div id="pinLockModal" class="pin-modal-overlay">
+  <div class="pin-modal-card">
+    <div class="pin-icon">🔒</div>
+    <h2>段考檢討 教師儀表板 安全鎖</h2>
+    <p>本平台為段考即時點名與試卷眼動核驗儀表板，請輸入教師管理密碼解鎖進入：</p>
+    <input type="password" id="pinInput" placeholder="請輸入密碼" maxlength="10" autocomplete="off">
+    <div id="pinErrorMsg" class="pin-error-text"></div>
+    <button id="btnSubmitPin" class="btn-pin-submit">🔓 解鎖進入系統</button>
+  </div>
+</div>
+
+
+<script>
+// ==================== 🔒 教師安全驗證門禁系統 (預設8088，無洩漏) ====================
+(function initGlobalHallGatekeeper() {
+  const SESSION_AUTH_KEY = 'bio_teacher_auth_passed';
+  const PIN_KEY = 'teacher_global_pin';
+  const DEFAULT_PIN = '8088';
+
+  function isAuthed() {
+    return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
+  }
+
+  function setAuthed() {
+    sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+  }
+
+  function setup() {
+    const modal = document.getElementById('pinLockModal');
+    const pinInput = document.getElementById('pinInput');
+    const btnSubmit = document.getElementById('btnSubmitPin');
+    const errMsg = document.getElementById('pinErrorMsg');
+
+    if (!modal) return;
+
+    if (isAuthed()) {
+      modal.classList.add('hidden');
+      document.body.style.overflow = 'auto';
+      return;
+    }
+
+    // 未驗證：強制鎖定畫面
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (pinInput) setTimeout(() => pinInput.focus(), 200);
+
+    function verifyPin() {
+      const entered = (pinInput ? pinInput.value.trim() : '');
+      const validPin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
+      if (entered === validPin) {
+        setAuthed();
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        if (pinInput) pinInput.value = '';
+        if (errMsg) errMsg.textContent = '';
+      } else {
+        if (errMsg) errMsg.textContent = '❌ 密碼不正確，請重新輸入！';
+        if (pinInput) {
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+    }
+
+    if (btnSubmit) btnSubmit.onclick = verifyPin;
+    if (pinInput) {
+      pinInput.onkeydown = (e) => {
+        if (e.key === 'Enter') verifyPin();
+      };
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
+  }
+})();
+</script>
+
 </body>
 </html>
