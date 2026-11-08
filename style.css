@@ -1108,3 +1108,15 @@ body.student-lock-mode #view-dashboard,
 body.student-lock-mode #view-settings {
     display: none !important;
 }
+
+/* 📘 段考診斷專屬：繳交點名框全套海洋藍同色系化 */
+.seat-box.status-done {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border-color: #3b82f6 !important;
+}
+.seat-box.status-correcting {
+    background-color: #f8fafc !important;
+    color: #64748b !important;
+    border-color: #94a3b8 !important;
+}
